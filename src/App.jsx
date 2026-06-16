@@ -26,7 +26,7 @@ const IDEA_BANK = [
     cat: "Chastity, Denial & Relinquishment", 
     tasks: [
       "Lock into restriction immediately and log a fresh 72-hour denial block", 
-      "Submit a formal request documenting your current consecutive days denied", 
+      "Submit a formal verification report documenting your consecutive days denied", 
       "Acknowledge her absolute, unmitigated ownership of your release schedule",
       "Surrender all personal boundary controls for the entirety of the upcoming week",
       "Log a strict hands-off verification report every 12 hours without exception"
@@ -55,11 +55,14 @@ export default function App() {
   const [logNotes, setLogNotes] = useState('')
   const [milestoneType, setMilestoneType] = useState('Subject Orgasm')
   const [milestoneNotes, setMilestoneNotes] = useState('')
+  
+  // State for Laura's custom free-form text box
+  const [customText, setCustomText] = useState('')
 
   useEffect(() => {
     if (role) {
       fetchData()
-      const channel = supabase.channel('laura-updates')
+      const channel = supabase.channel('laura-master-stream')
         .on('postgres_changes', { event: '*', schema: 'public' }, () => fetchData())
         .subscribe()
       return () => supabase.removeChannel(channel)
@@ -76,7 +79,16 @@ export default function App() {
   }
 
   async function handleAddInstruction(text, source) {
-    await supabase.from('laura_instructions').insert([{ instruction_text: text, issued_by: source }])
+    if (!text.trim()) return
+    await supabase.from('laura_instructions').insert([{ instruction_text: text.trim(), issued_by: source }])
+  }
+
+  async function handleCustomSubmit(e) {
+    e.preventDefault()
+    if (!customText.trim()) return
+    await handleAddInstruction(customText, 'Goddess Laura (Custom Directive)')
+    setCustomText('')
+    alert('Custom command dispatched down to terminal!')
   }
 
   async function handleLogTraining(e) {
@@ -126,47 +138,40 @@ export default function App() {
             
             <form onSubmit={handleLogTraining} style={{ backgroundColor: '#170e22', padding: '20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #2b1a3e' }}>
               <h3 style={{ marginTop: 0, color: '#fff' }}>Record Physical Session</h3>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#a68ec9' }}>Activity Classification:</label>
               <select value={activityType} onChange={(e) => setActivityType(e.target.value)} style={{ width: '100%', padding: '10px', backgroundColor: '#0d0714', color: '#fff', border: '1px solid #4d317a', marginBottom: '15px' }}>
                 <option value="Kneeling Session">Kneeling Duration Log</option>
                 <option value="Gag Session">Gag Tolerance Log</option>
                 <option value="Postural Duty">Strict Postural Duty</option>
               </select>
-              
-              <label style={{ display: 'block', marginBottom: '5px', color: '#a68ec9' }}>Total Duration (Minutes):</label>
               <input type="number" required placeholder="Minutes" value={duration} onChange={(e) => setDuration(e.target.value)} style={{ width: '100%', padding: '10px', backgroundColor: '#0d0714', color: '#fff', border: '1px solid #4d317a', marginBottom: '15px', boxSizing: 'border-box' }} />
-              
-              <label style={{ display: 'block', marginBottom: '5px', color: '#a68ec9' }}>Submission Report / Notes:</label>
               <textarea placeholder="Report execution metrics, physical response, or mental state..." value={logNotes} onChange={(e) => setLogNotes(e.target.value)} style={{ width: '100%', height: '80px', padding: '10px', backgroundColor: '#0d0714', color: '#fff', border: '1px solid #4d317a', marginBottom: '15px', boxSizing: 'border-box' }} />
-              
               <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#6b46b2', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Commit Session to Vault</button>
             </form>
 
             <form onSubmit={handleLogMilestone} style={{ backgroundColor: '#170e22', padding: '20px', borderRadius: '8px', border: '1px solid #2b1a3e' }}>
               <h3 style={{ marginTop: 0, color: '#fff' }}>Record Status & Milestones</h3>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#a68ec9' }}>Metric Type:</label>
               <select value={milestoneType} onChange={(e) => setMilestoneType(e.target.value)} style={{ width: '100%', padding: '10px', backgroundColor: '#0d0714', color: '#fff', border: '1px solid #4d317a', marginBottom: '15px' }}>
                 <option value="Subject Orgasm">Orgasm Tracker (Last Reset)</option>
                 <option value="Goddess Encounter">Goddess External Date / Encounter</option>
                 <option value="Denial Cycle Update">Denial Cycle Tracking Note</option>
               </select>
-              
-              <label style={{ display: 'block', marginBottom: '5px', color: '#a68ec9' }}>Ledger Ledger Details:</label>
               <textarea placeholder="Input dates, specific timelines, outside encounter notes, or restriction observations..." value={milestoneNotes} onChange={(e) => setMilestoneNotes(e.target.value)} style={{ width: '100%', height: '80px', padding: '10px', backgroundColor: '#0d0714', color: '#fff', border: '1px solid #4d317a', marginBottom: '15px', boxSizing: 'border-box' }} />
-              
               <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#db995a', color: '#0d0714', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Transmit Metric Update</button>
             </form>
           </div>
 
           <div>
             <h2 style={{ color: '#d4af37', borderBottom: '1px solid #341f54', paddingBottom: '5px' }}>📊 Vault Ledger Stream</h2>
-            <div style={{ backgroundColor: '#120c1f', border: '1px solid #341f54', padding: '20px', borderRadius: '8px' }}>
+            <div style={{ backgroundColor: '#120c1f', border: '1px solid #341f54', padding: '20px', borderRadius: '8px', maxHeight: '680px', overflowY: 'auto' }}>
               <h3 style={{ marginTop: 0, color: '#d4af37' }}>Active Instructions Archive</h3>
               {instructions.length === 0 ? <p style={{ color: '#666' }}>No active directives recorded.</p> : 
-                instructions.map(i => (
-                  <div key={i.id} style={{ borderBottom: '1px solid #231438', padding: '10px 0' }}>
-                    <span style={{ color: '#fff', fontSize: '1.1rem' }}>"{i.instruction_text}"</span>
-                    <br/><small style={{ color: '#8b72b3' }}>Issued by {i.issued_by} • {new Date(i.issued_at).toLocaleDateString()}</small>
+                instructions.map((i, index) => (
+                  <div key={i.id} style={{ borderBottom: '1px solid #231438', padding: '12px 0', opacity: index === 0 ? 1 : 0.6 }}>
+                    {index === 0 && <span style={{ color: '#d4af37', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>🔥 ACTIVE DIRECTIVE:</span>}
+                    <span style={{ color: index === 0 ? '#fff' : '#b3a1d1', fontSize: index === 0 ? '1.2rem' : '1rem', fontWeight: index === 0 ? 'bold' : 'normal' }}>
+                      "{i.instruction_text}"
+                    </span>
+                    <br/><small style={{ color: '#8b72b3' }}>Issued via {i.issued_by} • {new Date(i.issued_at).toLocaleDateString()} {new Date(i.issued_at).toLocaleTimeString()}</small>
                   </div>
                 ))
               }
@@ -179,9 +184,24 @@ export default function App() {
       {role === 'goddess' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '30px' }}>
           <div>
-            <h2 style={{ color: '#d4af37', borderBottom: '1px solid #341f54', paddingBottom: '5px' }}>💡 Directive Generator & Idea Bank</h2>
-            <p style={{ color: '#a68ec9' }}>Click any preset task to instantly broadcast it down to his active log ledger.</p>
-            <div style={{ backgroundColor: '#170e22', padding: '20px', borderRadius: '8px', border: '1px solid #2b1a3e', height: '600px', overflowY: 'auto' }}>
+            {/* ADDED: Laura's Custom Manual Free-Form Typing Box */}
+            <div style={{ backgroundColor: '#170e22', padding: '20px', borderRadius: '8px', border: '1px solid #d4af37', marginBottom: '20px' }}>
+              <h2 style={{ color: '#d4af37', marginTop: 0, fontSize: '1.3rem' }}>✍️ Issue Custom Command</h2>
+              <form onSubmit={handleCustomSubmit}>
+                <textarea 
+                  value={customText}
+                  onChange={(e) => setCustomText(e.target.value)}
+                  placeholder="Type an original custom assignment, rule, or training task here..."
+                  style={{ width: '100%', height: '70px', padding: '10px', backgroundColor: '#0d0714', color: '#fff', border: '1px solid #4d317a', borderRadius: '4px', boxSizing: 'border-box', marginBottom: '10px', fontFamily: 'monospace' }}
+                />
+                <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#d4af37', color: '#0d0714', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'monospace' }}>
+                  ⚡ Broadcast Custom Assignment
+                </button>
+              </form>
+            </div>
+
+            <h2 style={{ color: '#d4af37', borderBottom: '1px solid #341f54', paddingBottom: '5px', marginTop: 0 }}>💡 Directive Generator & Idea Bank</h2>
+            <div style={{ backgroundColor: '#170e22', padding: '20px', borderRadius: '8px', border: '1px solid #2b1a3e', height: '400px', overflowY: 'auto' }}>
               {IDEA_BANK.map((section, idx) => (
                 <div key={idx} style={{ marginBottom: '25px' }}>
                   <h3 style={{ color: '#d4af37', borderBottom: '1px solid #4d317a', paddingBottom: '6px', marginTop: 0 }}>{section.cat}</h3>
@@ -200,7 +220,6 @@ export default function App() {
 
           <div>
             <h2 style={{ color: '#9d75e3', borderBottom: '1px solid #341f54', paddingBottom: '5px' }}>📜 Auditing & Tracking Records</h2>
-            
             <div style={{ backgroundColor: '#120c1f', border: '1px solid #2b1a3e', padding: '15px', borderRadius: '8px', marginBottom: '20px', maxHeight: '320px', overflowY: 'auto' }}>
               <h3 style={{ marginTop: 0, color: '#9d75e3' }}>Physical Training Metrics</h3>
               {history.length === 0 ? <p style={{ color: '#666' }}>No entries found.</p> : 
